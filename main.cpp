@@ -6,16 +6,24 @@
 #include <stdlib.h>
 #define MAX_LINE 80
 
-struct hist_cmd{
+struct cmd_map{
     public:
         int loc;
         std::string cmd; 
 };
 
+void printcmdhistory(std::queue<cmd_map> hist){
+    std::queue<cmd_map> tmp(hist);
+    while(!tmp.empty()){
+        std::cout << "   " << tmp.front().loc << "\t" << tmp.front().cmd << std::endl;
+        tmp.pop();
+    }
+}
+
 int main(){
     std::string args[MAX_LINE/2+1];     //used to store the args from a stringstream
     char *argc[MAX_LINE/2+1];           //used to call execvp()
-    std::queue<hist_cmd> hist;
+    std::queue<cmd_map> hist;
     int num_cmds = 0;
     int should_run = 1;
     while(should_run){
@@ -33,20 +41,16 @@ int main(){
         if(args[0] == "exit")           //just check if they want to exit now
             should_run = 0;
         else if(args[0] == "history"){
-            std::queue<hist_cmd> tmp(hist);
-            while(!tmp.empty()){
-                std::cout << "   " << tmp.front().loc << "\t" << tmp.front().cmd << std::endl;
-                tmp.pop();
-            }
+            printcmdhistory(hist);
         }else if(args[0][0] == '!' && isdigit(args[0][1])){
             std::string cnum = args[0].substr(1,2);
             std::stringstream cmdnum(cnum);
             int c_num = 0;
             cmdnum >> c_num;
             int match = 0;
-            std::queue<hist_cmd> tmp(hist);
+            std::queue<cmd_map> tmp(hist);
             while(!tmp.empty()){
-                hist_cmd front = tmp.front();
+                cmd_map front = tmp.front();
                 if(c_num == front.loc){
                     match = 1;
                     in = front.cmd;
@@ -54,11 +58,7 @@ int main(){
                 tmp.pop();
             }
             if(in == "history"){
-                std::queue<hist_cmd> tmp(hist);
-                while(!tmp.empty()){
-                    std::cout << "   " << tmp.front().loc << "\t" << tmp.front().cmd << std::endl;
-                    tmp.pop();
-                }
+                printcmdhistory(hist);
             }
             std::stringstream ss(in);       //cast that string to a sstream
             for(i = 0; i < MAX_LINE/2+1; i++)   //make sure to clear args[]
@@ -74,11 +74,7 @@ int main(){
             }
             in = hist.back().cmd;
             if(in == "history"){
-                std::queue<hist_cmd> tmp(hist);
-                while(!tmp.empty()){
-                    std::cout << "   " << tmp.front().loc << "\t" << tmp.front().cmd << std::endl;
-                    tmp.pop();
-                }
+                printcmdhistory(hist);
             }
             std::stringstream ss(in);       //cast that string to a sstream
             for(i = 0; i < MAX_LINE/2+1; i++)   //make sure to clear args[]
@@ -106,7 +102,7 @@ int main(){
             if(to_wait)                 //didn't find an &, wait for child
                 wait(NULL);
         num_cmds++;
-        hist_cmd current;
+        cmd_map current;
         current.loc = num_cmds;
         current.cmd = in;
         hist.push(current);
