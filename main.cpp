@@ -20,6 +20,16 @@ void printcmdhistory(std::queue<cmd_map> hist){ //function to print the recent c
     }
 }
 
+int getnumfromstring(std::string input){
+    int returnval = 0; 
+    if(input[0] == '!' && isdigit(input[1])){
+        input = input.substr(1, input.size());
+        std::stringstream ss(input);
+        ss >> returnval;
+    }
+    return returnval;
+}
+
 int main(){
     std::string args[MAX_LINE/2+1];     //used to store the args from a stringstream
     char *argc[MAX_LINE/2+1];           //used to call execvp()
@@ -43,10 +53,7 @@ int main(){
         else if(args[0] == "history")
             printcmdhistory(hist);
         else if(args[0][0] == '!' && isdigit(args[0][1])){ //checking for format like !3 or !10 etc.
-            std::string cnum = args[0].substr(1,2);         //substr the two digits after the !
-            std::stringstream cmdnum(cnum);                 //cast to a sstream
-            int c_num = 0;
-            cmdnum >> c_num;                        //use the sstream to turn the string into int                      
+            int c_num = getnumfromstring(args[0]);                 
             int match = 0;
             std::queue<cmd_map> tmp(hist);          //temp of the hist queue
             while(!tmp.empty()){                    //iterate and check keys for our number
@@ -61,6 +68,7 @@ int main(){
                 std::cout << "no such command in history" << std::endl;
                 continue;
             }
+            std::cout << in << std::endl;
             if(in == "history")
                 printcmdhistory(hist);      //if its this command call it here
             std::stringstream ss(in);       //cast that string to a sstream
@@ -75,8 +83,8 @@ int main(){
                 std::cout << "no commands in history" << std::endl;
                 continue;
             }
-            std::cout << hist.back().cmd << std::endl;
             in = hist.back().cmd;           //set the current command to the previous
+            std::cout << in << std::endl;
             if(in == "history")            //history print call
                 printcmdhistory(hist);
             std::stringstream ss(in);       //cast that string to a sstream
