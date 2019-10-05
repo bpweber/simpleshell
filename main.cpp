@@ -6,10 +6,16 @@
 #include <stdlib.h>
 #define MAX_LINE 80
 
+struct hist_cmd{
+    public:
+        int loc;
+        std::string cmd; 
+};
+
 int main(){
     std::string args[MAX_LINE/2+1];     //used to store the args from a stringstream
     char *argc[MAX_LINE/2+1];           //used to call execvp()
-    std::queue<std::string> hist;
+    std::queue<hist_cmd> hist;
     int num_cmds = 0;
     int should_run = 1;
     while(should_run){
@@ -27,37 +33,60 @@ int main(){
         if(args[0] == "exit")           //just check if they want to exit now
             should_run = 0;
         else if(args[0] == "history"){
-            std::queue<std::string> tmp(hist);
+            std::queue<hist_cmd> tmp(hist);
             while(!tmp.empty()){
-                std::cout << "   " << tmp.front() << std::endl;
+                std::cout << "   " << tmp.front().loc << "\t" << tmp.front().cmd << std::endl;
                 tmp.pop();
             }
+        }else if(args[0][0] == '!' && isdigit(args[0][1])){
+            std::string cnum = args[0].substr(1,2);
+            std::stringstream cmdnum(cnum);
+            int c_num = 0;
+            cmdnum >> c_num;
+            int match = 0;
+            std::queue<hist_cmd> tmp(hist);
+            while(!tmp.empty()){
+                hist_cmd front = tmp.front();
+                if(c_num == front.loc){
+                    match = 1;
+                    in = front.cmd;
+                }
+                tmp.pop();
+            }
+            if(in == "history"){
+                std::queue<hist_cmd> tmp(hist);
+                while(!tmp.empty()){
+                    std::cout << "   " << tmp.front().loc << "\t" << tmp.front().cmd << std::endl;
+                    tmp.pop();
+                }
+            }
+            std::stringstream ss(in);       //cast that string to a sstream
+            for(i = 0; i < MAX_LINE/2+1; i++)   //make sure to clear args[]
+                args[i] = "";
+            i = 0;
+            while(ss >> args[i])            //parse user input into args[]
+                i++;
+            int nullterm = i;  
         }else if(args[0] == "!!"){
             if(hist.empty()){
                 std::cout << "no commands in history" << std::endl;
                 continue;
             }
-            std::string t;
-            std::string last = hist.back();
-            std::stringstream lcs(last);
-            for(i = 0; i < MAX_LINE/2+1; i++)   //make sure to clear args[]
-                args[i] = "";
-            i = 0;
-            lcs >> t;
-            while(lcs >> args[i])            //parse user input into args[]
-                i++;
-            if(args[0] == "history"){
-                std::queue<std::string> tmp(hist);
+            in = hist.back().cmd;
+            if(in == "history"){
+                std::queue<hist_cmd> tmp(hist);
                 while(!tmp.empty()){
-                    std::cout << "   " << tmp.front() << std::endl;
+                    std::cout << "   " << tmp.front().loc << "\t" << tmp.front().cmd << std::endl;
                     tmp.pop();
                 }
             }
-            nullterm = i;
-            t = "";
-            for(i = 0; i < nullterm; i++)
-                t += args[i] + " ";
-            in = t;
+            std::stringstream ss(in);       //cast that string to a sstream
+            for(i = 0; i < MAX_LINE/2+1; i++)   //make sure to clear args[]
+                args[i] = "";
+            i = 0;
+            while(ss >> args[i])            //parse user input into args[]
+                i++;
+            int nullterm = i;             
         }
         int to_wait = 1;                //should the parent wait for child to exit?
         for(int i = 0; i < MAX_LINE/2+1; i++)
@@ -77,9 +106,10 @@ int main(){
             if(to_wait)                 //didn't find an &, wait for child
                 wait(NULL);
         num_cmds++;
-        std::ostringstream ncs;
-        ncs << num_cmds;
-        hist.push(ncs.str() + "\t" + in);
+        hist_cmd current;
+        current.loc = num_cmds;
+        current.cmd = in;
+        hist.push(current);
         if(hist.size() > 10)
             hist.pop();
     }
