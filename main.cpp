@@ -29,10 +29,14 @@ int main(){
         else if(args[0] == "history"){
             std::queue<std::string> tmp(hist);
             while(!tmp.empty()){
-                std::cout << " " << tmp.front() << std::endl;
+                std::cout << "   " << tmp.front() << std::endl;
                 tmp.pop();
             }
         }else if(args[0] == "!!"){
+            if(hist.empty()){
+                std::cout << "no commands in history" << std::endl;
+                continue;
+            }
             std::string t;
             std::string last = hist.back();
             std::stringstream lcs(last);
@@ -45,7 +49,7 @@ int main(){
             if(args[0] == "history"){
                 std::queue<std::string> tmp(hist);
                 while(!tmp.empty()){
-                    std::cout << " " << tmp.front() << std::endl;
+                    std::cout << "   " << tmp.front() << std::endl;
                     tmp.pop();
                 }
             }
@@ -75,7 +79,7 @@ int main(){
         num_cmds++;
         std::ostringstream ncs;
         ncs << num_cmds;
-        hist.push(ncs.str() + " " + in);
+        hist.push(ncs.str() + "\t" + in);
         if(hist.size() > 10)
             hist.pop();
     }
