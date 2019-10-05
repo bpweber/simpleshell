@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <queue>
+#include <stdlib.h>
 #define MAX_LINE 80
 
 int main(){
@@ -61,9 +62,14 @@ int main(){
         for(i = 0; i < MAX_LINE/2+1; i++)   //cast string[] to *char[]
             argc[i] = const_cast<char*>(args[i].c_str());
         argc[nullterm] = NULL;          //insert null terminator
-        if(fork() == 0)                 //child
+        pid_t pid = fork();
+        if(pid == -1){                 //child
+            std::cout << "error occured" << std::endl;
+            exit(EXIT_FAILURE);
+        }else if(pid == 0){
             execvp(argc[0], argc);
-        else                            //parent
+            exit(0);
+        }else                            //parent
             if(to_wait)                 //didn't find an &, wait for child
                 wait(NULL);
         num_cmds++;
