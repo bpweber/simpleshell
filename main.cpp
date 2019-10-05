@@ -2,29 +2,29 @@
 #include <sstream>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <sys/types.h>
 #include <queue>
 #include <stdlib.h>
 #define MAX_LINE 80
 
-struct cmd_map{
+struct cmd_map{             //used to hold commands in history 
     public:
-        int loc;
-        std::string cmd; 
+        int loc;            //the number next to the command
+        std::string cmd;    //the command and args string format
 };
 
-void printcmdhistory(std::queue<cmd_map> hist){
-    std::queue<cmd_map> tmp(hist);
-    while(!tmp.empty()){
-        std::cout << "   " << tmp.front().loc << "\t" << tmp.front().cmd << std::endl;
-        tmp.pop();
+void printcmdhistory(std::queue<cmd_map> hist){ //function to print the recent commands
+    while(!hist.empty()){                        //iterate and print
+        std::cout << "   " << hist.front().loc << "\t" << hist.front().cmd << std::endl;
+        hist.pop();                              //pop each time
     }
 }
 
 int main(){
     std::string args[MAX_LINE/2+1];     //used to store the args from a stringstream
     char *argc[MAX_LINE/2+1];           //used to call execvp()
-    std::queue<cmd_map> hist;
-    int num_cmds = 0;
+    std::queue<cmd_map> hist;           //a queue of all recent commands
+    int num_cmds = 0;                   //keeps track of current command number
     int should_run = 1;
     while(should_run){
         std::cout << "osh> ";
@@ -40,73 +40,78 @@ int main(){
         int nullterm = i;               //null term for the end of the command and args
         if(args[0] == "exit")           //just check if they want to exit now
             should_run = 0;
-        else if(args[0] == "history"){
+        else if(args[0] == "history")
             printcmdhistory(hist);
-        }else if(args[0][0] == '!' && isdigit(args[0][1])){
-            std::string cnum = args[0].substr(1,2);
-            std::stringstream cmdnum(cnum);
+        else if(args[0][0] == '!' && isdigit(args[0][1])){ //checking for format like !3 or !10 etc.
+            std::string cnum = args[0].substr(1,2);         //substr the two digits after the !
+            std::stringstream cmdnum(cnum);                 //cast to a sstream
             int c_num = 0;
-            cmdnum >> c_num;
+            cmdnum >> c_num;                        //use the sstream to turn the string into int                      
             int match = 0;
-            std::queue<cmd_map> tmp(hist);
-            while(!tmp.empty()){
+            std::queue<cmd_map> tmp(hist);          //temp of the hist queue
+            while(!tmp.empty()){                    //iterate and check keys for our number
                 cmd_map front = tmp.front();
                 if(c_num == front.loc){
                     match = 1;
-                    in = front.cmd;
+                    in = front.cmd;                 //change the current command name to the one from hist
                 }
                 tmp.pop();
             }
-            if(in == "history"){
-                printcmdhistory(hist);
+            if(!match){
+                std::cout << "no such command in history" << std::endl;
+                continue;
             }
+            if(in == "history")
+                printcmdhistory(hist);      //if its this command call it here
             std::stringstream ss(in);       //cast that string to a sstream
             for(i = 0; i < MAX_LINE/2+1; i++)   //make sure to clear args[]
                 args[i] = "";
             i = 0;
             while(ss >> args[i])            //parse user input into args[]
                 i++;
-            int nullterm = i;  
+            nullterm = i;               //used to set the end of the args[]
         }else if(args[0] == "!!"){
-            if(hist.empty()){
+            if(hist.empty()){               //if hist is empty go to the top of loop
                 std::cout << "no commands in history" << std::endl;
                 continue;
             }
-            in = hist.back().cmd;
-            if(in == "history"){
+            std::cout << hist.back().cmd << std::endl;
+            in = hist.back().cmd;           //set the current command to the previous
+            if(in == "history")            //history print call
                 printcmdhistory(hist);
-            }
             std::stringstream ss(in);       //cast that string to a sstream
             for(i = 0; i < MAX_LINE/2+1; i++)   //make sure to clear args[]
                 args[i] = "";
             i = 0;
             while(ss >> args[i])            //parse user input into args[]
                 i++;
-            int nullterm = i;             
+            nullterm = i;             
         }
-        int to_wait = 1;                //should the parent wait for child to exit?
-        for(int i = 0; i < MAX_LINE/2+1; i++)
-            if(args[i] == "&")          //if there's an & then no!
-                to_wait = 0;
-        for(i = 0; i < MAX_LINE/2+1; i++)   //cast string[] to *char[]
-            argc[i] = const_cast<char*>(args[i].c_str());
-        argc[nullterm] = NULL;          //insert null terminator
-        pid_t pid = fork();
-        if(pid == -1){                 //child
-            std::cout << "error occured" << std::endl;
-            exit(EXIT_FAILURE);
-        }else if(pid == 0){
-            execvp(argc[0], argc);
-            exit(0);
-        }else                            //parent
-            if(to_wait)                 //didn't find an &, wait for child
-                wait(NULL);
-        num_cmds++;
-        cmd_map current;
-        current.loc = num_cmds;
+        if(args[0] != "history" && args[0] != "exit"){
+            int to_wait = 1;                //should the parent wait for child to exit?
+            for(int i = 0; i < MAX_LINE/2+1; i++)
+                if(args[i] == "&")          //if there's an & then no!
+                    to_wait = 0;
+            for(i = 0; i < MAX_LINE/2+1; i++)   //cast string[] to *char[]
+                argc[i] = const_cast<char*>(args[i].c_str());
+            argc[nullterm] = NULL;          //insert null terminator
+            pid_t pid = fork();
+            if(args[0] != "history" && args[0] != "exit")
+                if(pid == 0){            //child process
+                    if(execvp(argc[0], argc) == -1){
+                        std::cout << "command not found" << std::endl;
+                        exit(0);
+                    }
+                }else                            //parent
+                    if(to_wait)                 //didn't find an &, wait for child
+                        wait(NULL);
+        }
+        num_cmds++;                     //increment the cmd number after processing everything
+        cmd_map current;                //a new cmd_map to add to history
+        current.loc = num_cmds;         //set its number and command string
         current.cmd = in;
-        hist.push(current);
-        if(hist.size() > 10)
+        hist.push(current);             //add it to queue
+        if(hist.size() > 10)            //pop queue if it is more than 10S
             hist.pop();
     }
     return 0;
