@@ -20,14 +20,22 @@ void printcmdhistory(std::queue<cmd_map> hist){ //function to print the recent c
     }
 }
 
-int getnumfromstring(std::string input){
-    int returnval = 0; 
+std::string getcmdfromhistory(std::string input, std::queue<cmd_map> hist, int& match){
+    int num_cmd = 0;
+    match = 0;
     if(input[0] == '!' && isdigit(input[1])){
         input = input.substr(1, input.size());
         std::stringstream ss(input);
-        ss >> returnval;
+        ss >> num_cmd;
     }
-    return returnval;
+    while(!hist.empty()){                    //iterate and check keys for our number
+        cmd_map front = hist.front();
+        if(num_cmd == front.loc){
+            match = 1;
+            return front.cmd;                 //change the current command name to the one from hist
+        }
+        hist.pop();
+    }
 }
 
 int main(){
@@ -52,18 +60,9 @@ int main(){
             should_run = 0;
         else if(args[0] == "history")
             printcmdhistory(hist);
-        else if(args[0][0] == '!' && isdigit(args[0][1])){ //checking for format like !3 or !10 etc.
-            int c_num = getnumfromstring(args[0]);                 
+        else if(args[0][0] == '!' && isdigit(args[0][1])){ //checking for format like !3 or !10 etc.                
             int match = 0;
-            std::queue<cmd_map> tmp(hist);          //temp of the hist queue
-            while(!tmp.empty()){                    //iterate and check keys for our number
-                cmd_map front = tmp.front();
-                if(c_num == front.loc){
-                    match = 1;
-                    in = front.cmd;                 //change the current command name to the one from hist
-                }
-                tmp.pop();
-            }
+            in = getcmdfromhistory(args[0], hist, match);
             if(!match){
                 std::cout << "no such command in history" << std::endl;
                 continue;
