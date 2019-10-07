@@ -14,6 +14,8 @@ struct cmd_map{             //used to hold commands in history
 };
 
 void printcmdhistory(std::queue<cmd_map> hist){ //function to print the recent commands
+    if(hist.empty())
+        std::cout << "-osh: no commands to display" << std::endl;
     while(!hist.empty()){                        //iterate and print
         std::cout << "   " << hist.front().loc << "\t" << hist.front().cmd << std::endl;
         hist.pop();                              //pop each time
@@ -39,18 +41,31 @@ std::string getcmdfromhistory(std::string input, std::queue<cmd_map> hist, int& 
     return input;
 }
 
-int fillargsfromstring(std::string input, std::string args[]){
+int fillargsfromstring(std::string input, std::string args[]){  //parses user input from string into args[]
     std::stringstream ss(input);       //cast that string to a sstream
     int i = 0;
-    for(; i < MAX_LINE/2+1; i++)   //make sure to clear args[]
+    for(; i < MAX_LINE/2+1; i++)    //make sure to clear args[]
         args[i] = "";
         i = 0;
     while(ss >> args[i])            //parse user input into args[]
         i++;
-    return i;
+    return i;                       //return the location of the nullptr
 }
 
 int main(){
+    std::cout 
+    << "*********************************************************************************" << std::endl
+    << "*                    CS 433 Programming Assignment 2                            *" << std::endl
+    << "*                          Author: Bryce Weber                                  *" << std::endl
+    << "*                            Date: 10/9/2019                                    *" << std::endl
+    << "*                     Course: CS433 (Operating Systems)                         *" << std::endl
+    << "*             Description: A simple shell interface written in C++              *" << std::endl
+    << "*********************************************************************************" << std::endl << std::endl
+    << "Available osh commands:" << std::endl
+    << "   history\tLists previously entered commands" << std::endl
+    << "   !!\t\tExecutes most recent command from history" << std::endl
+    << "   !n\t\tExecutes the nth command from history" << std::endl << std::endl;
+
     std::string args[MAX_LINE/2+1];     //used to store the args from a stringstream
     char *argc[MAX_LINE/2+1];           //used to call execvp()
     std::queue<cmd_map> hist;           //a queue of all recent commands
@@ -69,7 +84,7 @@ int main(){
             int match = 0;
             in = getcmdfromhistory(args[0], hist, match);
             if(!match){
-                std::cout << "no such command in history" << std::endl;
+                std::cout << "-osh: no such command in history" << std::endl;
                 continue;
             }
             std::cout << in << std::endl;
@@ -78,7 +93,7 @@ int main(){
             nullterm = fillargsfromstring(in, args);               //used to set the end of the args[]
         }else if(args[0] == "!!"){
             if(hist.empty()){               //if hist is empty go to the top of loop
-                std::cout << "no commands in history" << std::endl;
+                std::cout << "-osh: no commands in history" << std::endl;
                 continue;
             }
             in = hist.back().cmd;           //set the current command to the previous
@@ -96,15 +111,16 @@ int main(){
                 argc[i] = const_cast<char*>(args[i].c_str());
             argc[nullterm] = NULL;          //insert null terminator
             pid_t pid = fork();
-            if(args[0] != "history" && args[0] != "exit")
+            if(args[0] != "history" && args[0] != "exit"){
                 if(pid == 0){            //child process
                     if(execvp(argc[0], argc) == -1){
-                        std::cout << "command not found" << std::endl;
+                        std::cout << "-osh: " << argc[0] << ": command not found" << std::endl;
                         exit(0);
                     }
                 }else                            //parent
                     if(to_wait)                 //didn't find an &, wait for child
                         wait(NULL);
+            }
         }
         num_cmds++;                     //increment the cmd number after processing everything
         cmd_map current;                //a new cmd_map to add to history
