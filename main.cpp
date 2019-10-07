@@ -36,6 +36,18 @@ std::string getcmdfromhistory(std::string input, std::queue<cmd_map> hist, int& 
         }
         hist.pop();
     }
+    return input;
+}
+
+int fillargsfromstring(std::string input, std::string args[]){
+    std::stringstream ss(input);       //cast that string to a sstream
+    int i = 0;
+    for(; i < MAX_LINE/2+1; i++)   //make sure to clear args[]
+        args[i] = "";
+        i = 0;
+    while(ss >> args[i])            //parse user input into args[]
+        i++;
+    return i;
 }
 
 int main(){
@@ -48,14 +60,7 @@ int main(){
         std::cout << "osh> ";
         std::string in = "";
         getline(std::cin, in);          //get command and args as a string
-        std::stringstream ss(in);       //cast that string to a sstream
-        int i = 0;
-        for(i = 0; i < MAX_LINE/2+1; i++)   //make sure to clear args[]
-            args[i] = "";
-        i = 0;
-        while(ss >> args[i])            //parse user input into args[]
-            i++;
-        int nullterm = i;               //null term for the end of the command and args
+        int nullterm = fillargsfromstring(in, args);               //null term for the end of the command and args
         if(args[0] == "exit")           //just check if they want to exit now
             should_run = 0;
         else if(args[0] == "history")
@@ -70,13 +75,7 @@ int main(){
             std::cout << in << std::endl;
             if(in == "history")
                 printcmdhistory(hist);      //if its this command call it here
-            std::stringstream ss(in);       //cast that string to a sstream
-            for(i = 0; i < MAX_LINE/2+1; i++)   //make sure to clear args[]
-                args[i] = "";
-            i = 0;
-            while(ss >> args[i])            //parse user input into args[]
-                i++;
-            nullterm = i;               //used to set the end of the args[]
+            nullterm = fillargsfromstring(in, args);               //used to set the end of the args[]
         }else if(args[0] == "!!"){
             if(hist.empty()){               //if hist is empty go to the top of loop
                 std::cout << "no commands in history" << std::endl;
@@ -86,20 +85,14 @@ int main(){
             std::cout << in << std::endl;
             if(in == "history")            //history print call
                 printcmdhistory(hist);
-            std::stringstream ss(in);       //cast that string to a sstream
-            for(i = 0; i < MAX_LINE/2+1; i++)   //make sure to clear args[]
-                args[i] = "";
-            i = 0;
-            while(ss >> args[i])            //parse user input into args[]
-                i++;
-            nullterm = i;             
+            nullterm = fillargsfromstring(in, args);             
         }
         if(args[0] != "history" && args[0] != "exit"){
             int to_wait = 1;                //should the parent wait for child to exit?
             for(int i = 0; i < MAX_LINE/2+1; i++)
                 if(args[i] == "&")          //if there's an & then no!
                     to_wait = 0;
-            for(i = 0; i < MAX_LINE/2+1; i++)   //cast string[] to *char[]
+            for(int i = 0; i < MAX_LINE/2+1; i++)   //cast string[] to *char[]
                 argc[i] = const_cast<char*>(args[i].c_str());
             argc[nullterm] = NULL;          //insert null terminator
             pid_t pid = fork();
